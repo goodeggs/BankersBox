@@ -2,7 +2,7 @@
  * @license MIT License
  *
  * Copyright (c) 2012 Twilio Inc.
- * 
+ *
  * Authors: Chad Etzel <chetzel@twilio.com>
  *
  * Permission is hereby granted, free of charge, to any person obtaining
@@ -27,11 +27,32 @@
 
 (function(ctx) {
 
+  function isStorageSupported(storageType) {
+    var supported = window[storageType];
+
+    // When Safari (OS X or iOS) is in private browsing mode, it appears as though localStorage
+    // is available, but trying to call .setItem throws an exception below:
+    // "QUOTA_EXCEEDED_ERR: DOM Exception 22: An attempt was made to add something to storage that exceeded the quota."
+    if (supported && storageType === 'localStorage') {
+      var key = '__' + Math.round(Math.random() * 1e7);
+
+      try {
+        localStorage.setItem(key, key);
+        localStorage.removeItem(key);
+      }
+      catch (err) {
+        supported = false;
+      }
+    }
+
+    return supported;
+  }
+
   if (typeof(window) === 'undefined') {
     window = {};
   }
 
-  if (typeof(window.localStorage) === 'undefined' && ctx !== window) {
+  if (typeof(window.localStorage) === 'undefined' || !isStorageSupported('localStorage')) {
     // fake out localStorage functionality, mostly for testing purposes
     window.localStorage = {};
     window.localStorage.store = {};
@@ -728,14 +749,7 @@
     };
 
     this.storeItem = function(k, v) {
-      try {
-        window.localStorage.setItem(k, v);
-      } catch (e) {
-        if (e == QUOTA_EXCEEDED_ERR) {
-          // TODO: properly handle quota exceeded behavior
-        }
-        throw(e);
-      }
+      window.localStorage.setItem(k, v);
     };
 
     this.removeItem = function(k) {
